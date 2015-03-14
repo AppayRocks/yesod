@@ -18,6 +18,7 @@ import           Data.Text.Encoding (decodeUtf8With)
 import           Data.Text.Encoding.Error (lenientDecode)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as S
+import           Data.List (isSuffixOf)
 
 import           Control.Exception (SomeException, try, IOException)
 import           Control.Exception.Lifted (handle)
@@ -73,7 +74,13 @@ getDeps hsSourceDirs = do
                         ds -> ds
     hss <- fmap concat $ mapM findHaskellFiles defSrcDirs
     deps' <- mapM determineDeps hss
-    return $ (hss, fixDeps $ zip hss deps')
+    let hss' = hss ++ ["./Handler/Blog/TemplateHaskell.hs"]
+    myFiles <- getDirectoryContents "templates/blog-entries"
+    let myFiles' = filter (".hamlet" `isSuffixOf`) myFiles
+    let myFilesWithComparison =
+            map (\f -> (AlwaysOutdated, "templates/blog-entries/" ++ f)) myFiles'
+    let deps'' = deps' ++ [myFilesWithComparison]
+    return (hss', fixDeps $ zip hss' deps'')
 
 data AnyFilesTouched = NoFilesTouched | SomeFilesTouched
 instance Monoid AnyFilesTouched where
